@@ -21,7 +21,7 @@ cargo make
 ```
 
 ### Test
-
+On the test VM:
 
 Enable loading of test drivers 
 ```
