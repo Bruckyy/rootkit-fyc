@@ -21,5 +21,12 @@ pub unsafe extern "system" fn driver_entry(
 ) -> NTSTATUS {
     println!("Hello world!");
 
+    (*driver).DriverUnload = Some(driver_exit);
+    
     STATUS_SUCCESS
+}
+
+// Function called when the driver is unloaded (on exit)
+extern "C" fn driver_exit(driver: *mut DRIVER_OBJECT) {
+    println!("Exiting driver!");
 }
