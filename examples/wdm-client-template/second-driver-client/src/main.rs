@@ -9,6 +9,10 @@ use windows::Win32::Storage::FileSystem::FILE_FLAGS_AND_ATTRIBUTES;
 use  windows::Win32::Foundation::CloseHandle;
 use windows::core::w;
 use windows::Win32::Foundation::HANDLE;
+use windows::Win32::System::IO::DeviceIoControl;
+
+mod constants;
+use constants::*;
 
 fn main() {
     let filename = w!("\\\\.\\MyDevice");
@@ -27,7 +31,17 @@ fn main() {
     match handle {
         Ok(handle) => {
             println!("Handle: {:?}", handle);
-            CloseHandle(handle).unwrap();
+            let result = DeviceIoControl(handle, IOCTL_PROCESS_HIDE_REQUEST, None, 0, None, 0, None, None);
+            match result {
+                Ok(_) => {
+                    println!("Success");
+                }
+                Err(error) => {
+                    println!("Error: {:?}", error);
+                }
+            }
+
+            
             
         }
         Err(error) => {
