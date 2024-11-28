@@ -1,7 +1,7 @@
 
 use alloc::string::{String, ToString};
 use wdk_sys::LIST_ENTRY;
-use wdk_sys::{STATUS_SUCCESS, DRIVER_OBJECT, NTSTATUS, PCUNICODE_STRING, HANDLE};
+use wdk_sys::HANDLE;
 use core::ptr::addr_of_mut;
 
 pub type PVOID = *mut core::ffi::c_void;
