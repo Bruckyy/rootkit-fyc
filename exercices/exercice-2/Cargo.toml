@@ -1,0 +1,32 @@
+[package]
+build = "build.rs"
+name = "exercice_2"
+version = "0.1.0"
+edition = "2021"
+
+[package.metadata.wdk.driver-model]
+driver-type = "WDM"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wdk = { git = "https://github.com/microsoft/windows-drivers-rs.git", version = "0.3.0" }
+wdk-alloc = { git = "https://github.com/microsoft/windows-drivers-rs.git", version = "0.3.0" }
+wdk-panic = { git = "https://github.com/microsoft/windows-drivers-rs.git", version = "0.3.0" }
+wdk-sys = { git = "https://github.com/microsoft/windows-drivers-rs.git", version = "0.3.0" }
+
+[build-dependencies]
+wdk-build = { git = "https://github.com/microsoft/windows-drivers-rs.git", version = "0.3.0" }
+
+[features]
+default = []
+nightly = ["wdk/nightly", "wdk-sys/nightly"]
+
+[profile.dev]
+panic = "abort"
+lto = true
+
+[profile.release]
+panic = "abort"
+lto = true
