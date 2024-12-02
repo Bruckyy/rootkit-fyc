@@ -21,8 +21,12 @@ pub unsafe extern "system" fn driver_entry(
 ) -> NTSTATUS {
     println!("Hello world!");
 
+    // Afficher ici l'adresse de la fonction driver_exit
+    println!("Adresse de la fonction driver_exit: {:p}", driver_exit as extern "C" fn(*mut DRIVER_OBJECT));
     (*driver).DriverUnload = Some(driver_exit);
-    
+    // Afficher l'objet driver (DRIVER_OBJECT)
+    println!("{:?}", driver);
+
     STATUS_SUCCESS
 }
 
