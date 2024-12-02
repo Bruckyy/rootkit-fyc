@@ -5,7 +5,7 @@
 
 [Version]
 Signature   = "$WINDOWS NT$"
-Class       = SecondDriver
+Class       = FirstDriver
 ClassGuid   = {78A1C341-4539-DEAD-BEEF-00C04FAD5171}
 Provider    = %ProviderString%
 PnpLockDown = 1
@@ -17,7 +17,7 @@ DefaultDestDir = 13
 1 = %DiskId1%,,,""
 
 [SourceDisksFiles]
-second_driver.sys = 1,,
+first_driver.sys = 1,,
 
 ; ================= Class section =====================
 
@@ -40,7 +40,7 @@ HKR,,Icon,,-5
 CopyFiles=Drivers_Dir
 
 [Drivers_Dir]
-second_driver.sys
+first_driver.sys
 
 ; ================= Service installation =================
 [SampleWDMDevice.NT$ARCH$.Services]
@@ -51,7 +51,7 @@ DisplayName    = %ServiceDesc%
 ServiceType    = 1               ; SERVICE_KERNEL_DRIVER
 StartType      = 3               ; SERVICE_DEMAND_START 
 ErrorControl   = 1               ; SERVICE_ERROR_NORMAL
-ServiceBinary  = %13%\second_driver.sys
+ServiceBinary  = %13%\first_driver.sys
 
 ; ================= Strings =================
 [Strings]
