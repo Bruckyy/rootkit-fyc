@@ -99,7 +99,7 @@ unsafe extern "C" fn major_function_device_control(_device: PDEVICE_OBJECT, pirp
             let mut informations = 0;
 
             status = match shadow_process(target_pid) {
-                Ok(_) => {
+                Ok(true) => {
                     println!("Process {:?} successfully shadowed", target_pid);
                     
                     if !output_buffer.is_null() {
@@ -109,6 +109,18 @@ unsafe extern "C" fn major_function_device_control(_device: PDEVICE_OBJECT, pirp
                     
                     STATUS_SUCCESS
                 },
+
+                Ok(false) => {
+                    println!("Unknown error calling shadow_process");
+
+                    if !output_buffer.is_null() {
+                        *output_buffer = 0x0;
+                        informations = 4;
+                    }
+
+                    STATUS_UNSUCCESSFUL
+                }
+                
                 Err(e) => {
                     println!("Error calling shadow_process: {:?}", e);
                     
