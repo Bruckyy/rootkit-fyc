@@ -2,7 +2,6 @@
 use alloc::string::{String, ToString};
 use wdk_sys::LIST_ENTRY;
 use wdk_sys::HANDLE;
-use core::ptr::addr_of_mut;
 
 mod shadowed_process;
 use shadowed_process::ShadowedProcess;
