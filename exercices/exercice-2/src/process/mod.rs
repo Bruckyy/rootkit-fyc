@@ -55,6 +55,7 @@ unsafe fn remove_links(current: *mut LIST_ENTRY) -> Result<bool,String> {
     // - Faire pointer le Flink du processus précédent sur la LIST_ENTRY du processus suivant
     // - Faire pointer Flink et Blink de notre processus cible sur sa propre LIST_ENTRY de sorte à créer une boucle
     //
+    // Comme pour la fonction shadow_process() retourner une valeur cohérente 
     // Vérifiez bien la validité des pointeurs, en mode noyau chaque erreur est fatale.
 
     return Ok(true);
