@@ -22,8 +22,8 @@ use wdk_alloc::WdkAllocator;
 use wdk::{nt_success, println};
 use wdk_sys::ntddk::{IoCreateDevice, IoDeleteDevice, IoCreateSymbolicLink, IoDeleteSymbolicLink, IofCompleteRequest};
 use wdk_sys::{
-    DEVICE_OBJECT, DRIVER_OBJECT, IRP, IRP_MJ_CREATE,IRP_MJ_DEVICE_CONTROL, NTSTATUS, PCUNICODE_STRING, PDEVICE_OBJECT,
-    PDRIVER_DISPATCH, PIRP, PUNICODE_STRING, STATUS_SUCCESS, UNICODE_STRING,PIO_STACK_LOCATION, STATUS_UNSUCCESSFUL, IO_NO_INCREMENT
+    DRIVER_OBJECT, IRP_MJ_CREATE,IRP_MJ_DEVICE_CONTROL, NTSTATUS, PCUNICODE_STRING, PDEVICE_OBJECT,
+    PIRP, STATUS_SUCCESS, UNICODE_STRING,PIO_STACK_LOCATION, STATUS_UNSUCCESSFUL, IO_NO_INCREMENT
 };
 
 
@@ -37,7 +37,7 @@ static GLOBAL_ALLOCATOR: WdkAllocator = WdkAllocator;
 #[export_name = "DriverEntry"] // WDF expects a symbol with the name DriverEntry
 pub unsafe extern "system" fn driver_entry(
     driver: &mut DRIVER_OBJECT,
-    registry_path: PCUNICODE_STRING,
+    _registry_path: PCUNICODE_STRING,
 ) -> NTSTATUS {
     println!("Hello world!");
 
@@ -76,17 +76,17 @@ extern "C" fn driver_exit(driver: *mut DRIVER_OBJECT) {
     println!("Deleted device!");
     let mut dos_name: UNICODE_STRING = "\\DosDevices\\MyDevice".to_unicode();
     unsafe {
-        IoDeleteSymbolicLink(&mut dos_name);
+        let _ = IoDeleteSymbolicLink(&mut dos_name);
     };
 }
 
-unsafe extern "C" fn major_function_create(_device: PDEVICE_OBJECT, pirp: PIRP) -> NTSTATUS {
+unsafe extern "C" fn major_function_create(_device: PDEVICE_OBJECT, _pirp: PIRP) -> NTSTATUS {
     println!("Major function create called!");
     STATUS_SUCCESS
 }
 
 unsafe extern "C" fn major_function_device_control(_device: PDEVICE_OBJECT, pirp: PIRP) -> NTSTATUS {
-    let stack = IoGetCurrentIrpStackLocation(pirp);
+    let stack = io_get_current_irp_stack_location(pirp);
     let ioctl = (*stack).Parameters.DeviceIoControl.IoControlCode;
     let mut status = STATUS_UNSUCCESSFUL;
 
@@ -146,7 +146,7 @@ unsafe extern "C" fn major_function_device_control(_device: PDEVICE_OBJECT, pirp
 
 
 
-pub unsafe fn IoGetCurrentIrpStackLocation(irp: PIRP) -> PIO_STACK_LOCATION {
+pub unsafe fn io_get_current_irp_stack_location(irp: PIRP) -> PIO_STACK_LOCATION {
     assert!((*irp).CurrentLocation <= (*irp).StackCount + 1); // todo maybe do error handling instead of an assert?
     (*irp)
         .Tail
