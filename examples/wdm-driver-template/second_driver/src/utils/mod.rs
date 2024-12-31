@@ -14,10 +14,10 @@ impl ToUnicodeString for &str {
             Buffer: core::ptr::null_mut(),
         };
 
-        let mut buffer: Vec<u16> = self.encode_utf16().chain(Some(0)).collect();
+        let buffer: Vec<u16> = self.encode_utf16().chain(Some(0)).collect();
 
         unsafe {
-            RtlInitUnicodeStringEx(&mut unicode_string, buffer.as_ptr());
+            let _ = RtlInitUnicodeStringEx(&mut unicode_string, buffer.as_ptr());
         }
 
         unicode_string

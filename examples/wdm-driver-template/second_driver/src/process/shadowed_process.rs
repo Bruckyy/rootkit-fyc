@@ -2,7 +2,6 @@ use wdk_sys::LIST_ENTRY;
 
 const ACTIVE_PROCESS_LINKS_OFFSET: usize = 0x448;
 const PID_OFFSET: usize = 0x440;
-const IMAGE_FILE_NAME_OFFSET: usize = 0x5a8;
 
 pub type PVOID = *mut core::ffi::c_void;
 
