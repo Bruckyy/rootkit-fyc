@@ -34,12 +34,12 @@ fn get_version_info() -> OSVERSIONINFOEXW {
         os_info.dwOSVersionInfoSize = std::mem::size_of::<OSVERSIONINFOEXW>() as u32;
 
         RtlGetVersion(&mut os_info);
-        
+
         os_info
     }
 }
 
-
+// Perform a dns request to google.com
 fn check_internet() -> bool {
     
     let target_dom = "google.com:443";
@@ -53,3 +53,6 @@ fn check_internet() -> bool {
         }
     }
 }
+
+
+// TODO: Write more checks (example: Virtual Machine detection)
