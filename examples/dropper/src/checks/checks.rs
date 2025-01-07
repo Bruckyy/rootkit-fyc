@@ -6,7 +6,8 @@ use std::net::ToSocketAddrs;
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::process::Command;
 use std::{thread, time};
-
+use sysinfo::{System, SystemExt, ComponentExt, ProcessExt};
+use pnet::datalink;
 
 extern "system" {
     fn RtlGetVersion(lpVersionInformation: *mut OSVERSIONINFOEXW) -> i32;
@@ -48,8 +49,35 @@ pub fn perform_checks() -> bool {
         return false;
     }
 
+        // Check MAC addresses for VM patterns
+    if check_mac_addresses() {
+        println!("MAC address indicates a VM ❌");
+        return false;
+    } else {
+        println!("MAC address does not indicate a VM ✔️");
+    }
+
+    // Check CPU temperature
+    if check_cpu_temperature() {
+        println!("CPU temperature detected ✔️");
+    } else {
+        println!("No CPU temperature detected, likely a virtual machine ❌");
+        return false;
+    }
+
+    // Check for suspicious processes
+    if check_suspicious_processes() {
+        println!("Suspicious processes detected ❌");
+        return false;
+    } else {
+        println!("No suspicious processes detected ✔️");
+    }
+
     true
 }
+
+
+
 
 fn get_version_info() -> OSVERSIONINFOEXW {
     unsafe {
@@ -121,6 +149,54 @@ fn sleep_test() -> bool {
     thread::sleep(duration);
     if now.elapsed() >= duration {
         return true;
+    }
+    false
+}
+
+// Check if the MAC address indicates a VM
+fn check_mac_addresses() -> bool {
+    let vm_mac_prefixes = vec![
+        "08:00:27", // VirtualBox
+        "00:0C:29", "00:1C:14", "00:50:56", "00:05:69", // VMware
+    ];
+    for iface in datalink::interfaces() {
+        if let Some(mac) = iface.mac {
+            let mac_str = mac.to_string().to_uppercase();
+            for prefix in &vm_mac_prefixes {
+                if mac_str.starts_with(prefix) {
+                    println!("Detected VM MAC address: {}", mac_str);
+                    return true;
+                }
+            }
+        }
+    }
+    false
+}
+
+// Check the CPU temperature if not available is a VM
+fn check_cpu_temperature() -> bool {
+    let mut system = System::new_all();
+    system.refresh_all();
+    for component in system.components() {
+        if let Some(temp) = component.temperature() {
+            println!("CPU Temperature: {}°C", temp);
+            return true;
+        }
+    }
+    false
+}
+
+// Check for non needed processes
+fn check_suspicious_processes() -> bool {
+    let suspicious_processes = vec!["ollydbg.exe", "wireshark.exe", "procmon.exe", "ida.exe", "x64dbg.exe"];
+    let mut system = System::new_all();
+    system.refresh_processes();
+    for (_pid, process) in system.processes() {
+        let name = process.name().to_lowercase();
+        if suspicious_processes.iter().any(|&suspect| name.contains(suspect)) {
+            println!("Detected suspicious process: {}", name);
+            return true;
+        }
     }
     false
 }
