@@ -48,19 +48,6 @@ pub fn perform_checks() -> bool {
         return false;
     }
 
-    // Check uptime
-    // if let Some(uptime) = get_uptime() {
-    //     if uptime > 3600 {
-    //         println!("Uptime: {} seconds ✔️", uptime);
-    //     } else {
-    //         println!("Uptime: {} seconds ❌ (Less than 1 hour)", uptime);
-    //         return false;
-    //     }
-    // } else {
-    //     println!("Failed to get uptime ❌");
-    //     return false;
-    // }
-
     true
 }
 
@@ -101,14 +88,6 @@ fn check_virtual_machine() -> bool {
         }
     }
 
-    if let Ok(mut file) = fs::File::open("/proc/self/cgroup") {
-        let mut contents = String::new();
-        file.read_to_string(&mut contents).unwrap_or_default();
-        if contents.contains("docker") || contents.contains("lxc") {
-            return false;
-        }
-    }
-
     true
 }
 
@@ -145,18 +124,3 @@ fn sleep_test() -> bool {
     }
     false
 }
-
-// fn get_uptime() -> Option<u64> {
-//     if let Ok(duration) = SystemTime::now().duration_since(UNIX_EPOCH) {
-//         let boot_time = Command::new("wmic")
-//             .args(["os", "get", "LastBootUpTime"])
-//             .output()
-//             .ok()?;
-
-//         let output = String::from_utf8_lossy(&boot_time.stdout);
-//         let boot_time_str = output.lines().nth(1)?.trim();
-//         let boot_time_secs = boot_time_str.parse::<u64>().ok()?;
-//         return Some(duration.as_secs() - boot_time_secs);
-//     }
-//     None
-// }
