@@ -3,7 +3,13 @@ name = "dropper"
 version = "0.1.0"
 edition = "2021"
 
+
 [dependencies]
 reqwest = { version = "0.12.12", features = ["blocking", "json"] }
 winapi = { version = "0.3.9", features = ["winnt", "sysinfoapi"] }
 tokio = { version = "1.42.0", features = ["full"] }
+sysinfo = "0.26"
+winreg = "0.9"
+
+[build-dependencies]
+winres = "0.1"

