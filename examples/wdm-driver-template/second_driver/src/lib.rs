@@ -23,9 +23,14 @@ use wdk::{nt_success, println};
 use wdk_sys::ntddk::{IoCreateDevice, IoDeleteDevice, IoCreateSymbolicLink, IoDeleteSymbolicLink, IofCompleteRequest};
 use wdk_sys::{
     DRIVER_OBJECT, IRP_MJ_CREATE,IRP_MJ_DEVICE_CONTROL, NTSTATUS, PCUNICODE_STRING, PDEVICE_OBJECT,
-    PIRP, STATUS_SUCCESS, UNICODE_STRING,PIO_STACK_LOCATION, STATUS_UNSUCCESSFUL, IO_NO_INCREMENT
+    PIRP, STATUS_SUCCESS, UNICODE_STRING,PIO_STACK_LOCATION, STATUS_UNSUCCESSFUL, IO_NO_INCREMENT, STATUS_INVALID_PARAMETER, STATUS_INSUFFICIENT_RESOURCES
 };
 
+
+// TEST
+// use wdk_sys::AUX_KLIB::{AuxKlibInitialize, AuxKlibQueryModuleInformation, AUX_MODULE_EXTENDED_INFO};
+use wdk_sys::POOL_FLAG_PAGED;
+//
 
 
 
@@ -162,5 +167,3 @@ pub unsafe  fn complete_request(irp: PIRP, status: NTSTATUS, information: usize)
     (*irp).IoStatus.Information = information as u64;
     IofCompleteRequest(irp, IO_NO_INCREMENT as i8);
 }
-
-
