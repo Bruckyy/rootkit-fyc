@@ -4,6 +4,10 @@ extern crate alloc;
 #[cfg(not(test))]
 extern crate wdk_panic;
 
+mod hook;
+use hook::hooking_prototype;
+use hook::hooking;
+
 mod utils;
 use utils::ToUnicodeString;
 
@@ -40,6 +44,12 @@ pub unsafe extern "system" fn driver_entry(
     _registry_path: PCUNICODE_STRING,
 ) -> NTSTATUS {
     println!("Hello world!");
+
+
+    // this is prototype for hooking function
+    hooking();
+    hooking_prototype();
+    // this is prototype's end
 
     let mut device_name: UNICODE_STRING = "\\Device\\MyDevice\0".to_unicode();
 
