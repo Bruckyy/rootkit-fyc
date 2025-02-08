@@ -7,6 +7,9 @@ extern crate wdk_panic;
 mod hook;
 use hook::hooking_prototype;
 use hook::hooking;
+use hook::etw_init;
+use hook::get_ckcl_logger_id;
+use hook::pmc_counter_enable;
 
 mod utils;
 use utils::ToUnicodeString;
@@ -47,9 +50,20 @@ pub unsafe extern "system" fn driver_entry(
 
 
     // this is prototype for hooking function
+    
+
+
+    
+    
+    
+
+    etw_init();
+
+    pmc_counter_enable();
+
     hooking();
-    hooking_prototype();
-    // this is prototype's end
+
+    
 
     let mut device_name: UNICODE_STRING = "\\Device\\MyDevice\0".to_unicode();
 
