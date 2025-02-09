@@ -5,7 +5,6 @@ extern crate alloc;
 extern crate wdk_panic;
 
 mod hook;
-use hook::hooking_prototype;
 use hook::hooking;
 use hook::etw_init;
 use hook::get_ckcl_logger_id;

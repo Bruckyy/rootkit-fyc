@@ -3,8 +3,7 @@ use core::ptr::null_mut;
 use core::mem::transmute;
 
 use alloc::vec;
-
-
+use core::sync::atomic::AtomicPtr;
 use alloc::boxed::Box;
 use wdk::{nt_success, println};
 use wdk_sys::STATUS_BUFFER_TOO_SMALL;
@@ -27,6 +26,9 @@ use wdk_sys::ntddk::KeQueryPerformanceCounter;
 
 use wdk_sys::ntddk::MmGetSystemRoutineAddress;
 use crate::utils::ToUnicodeString;
+
+
+static ORG_HALP_COLLECT_PMC_COUNTERS: AtomicPtr<extern "C" fn() -> ()> = AtomicPtr::new(null_mut());
 
 const  SystemTraceControlGuid : GUID = GUID {
     Data1: 0x9e814aad,
@@ -710,38 +712,13 @@ pub fn etw_init() {
 ///////////////////////////// end of added from chinese github /////////////////////////
 
 
-pub fn hooking_prototype() {
 
-    
-
-    unsafe {
-        let FunctionCode = 0x1;
-        let InBuffer: *mut c_void = [0;0xbB0].as_mut_ptr() as *mut c_void; 
-        let InBufferLen = 0xbB0;
-        let OutBuffer: *mut c_void = [0;0xbB0].as_mut_ptr() as *mut c_void;
-        let OutBufferLen = 0xbB0;
-        let ReturnLength: [u32; 1] = [0];
-
-        let status = ZwTraceControl(FunctionCode, InBuffer , InBufferLen, OutBuffer, OutBufferLen, ReturnLength.as_ptr() as *mut ULONG);
-        println!("ZwTraceControl: {:?}", status);
-        println!("ReturnLength: {:?}", ReturnLength);
-        if status == STATUS_BUFFER_TOO_SMALL {
-            println!("STATUS_BUFFER_TOO_SMALL");
-        }
-        else if status ==  STATUS_INVALID_BUFFER_SIZE {
-            println!("STATUS_INVALID_BUFFER_SIZE");
-            
-        }
-        else {
-            println!("STATUS: is not STATUS_BUFFER_TOO_SMALL");
-        }
-    }
 
     
 
 
 
-}
+
 
 
 pub fn hooking() {
@@ -752,6 +729,11 @@ pub fn hooking() {
         let HalpCollectPmcCounters = address.wrapping_add(0x248);
         println!("HalpCollectPmcCounters: {:?}", HalpCollectPmcCounters);
 
+        let original_func : *mut extern "C" fn() -> () = *(HalpCollectPmcCounters as *mut *mut extern "C" fn() -> ());
+        
+
+        ORG_HALP_COLLECT_PMC_COUNTERS.store(original_func, core::sync::atomic::Ordering::Relaxed);
+
         let func_ptr: extern "C" fn() -> () = base_hook;
 
 
@@ -760,6 +742,7 @@ pub fn hooking() {
     }
     
 }
+
 extern "C"  fn base_hook() {
     println!("base_hook");
 }
